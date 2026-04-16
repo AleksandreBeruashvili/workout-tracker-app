@@ -212,9 +212,13 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> {
                 });
               },
               background: Container(
+                margin: EdgeInsets.only(bottom: 8.0),
                 padding: EdgeInsets.only(right: 24.0),
                 alignment: Alignment.centerRight,
-                decoration: BoxDecoration(color: Colors.red),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
                 child: Icon(Icons.delete, color: Colors.white),
               ),
               child: Card(
@@ -321,18 +325,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               final amountText = _amountController.text.trim();
               if (title.isEmpty || amountText.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please fill in all fields'),
-                  ),
+                  const SnackBar(content: Text('Please fill in all fields')),
                 );
                 return;
               }
               final amount = double.tryParse(amountText);
               if (amount == null || amount <= 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid amount'),
-                  ),
+                  const SnackBar(content: Text('Please enter a valid amount')),
                 );
                 return;
               }
