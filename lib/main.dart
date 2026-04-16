@@ -1,4 +1,37 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+enum Category {
+  food(label: 'Food', icon: Icons.fastfood, color: Colors.orange),
+  transport(label: 'Transport', icon: Icons.directions_car, color: Colors.blue),
+  entertainment(
+    label: 'Entertainment',
+    icon: Icons.movie,
+    color: Colors.purple,
+  ),
+  utilities(label: 'Utilities', icon: Icons.light_mode, color: Colors.green),
+  others(label: 'Others', icon: Icons.category, color: Colors.grey);
+
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const Category({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+}
+
+class Expense {
+  final int id;
+  final String title;
+  final double amount;
+  final Category category;
+
+  Expense(this.id, this.title, this.amount, this.category);
+}
 
 void main() => runApp(const MyApp());
 
@@ -30,10 +63,21 @@ class MyExpensesScreen extends StatefulWidget {
 
 class _MyExpensesScreenState extends State<MyExpensesScreen> {
   final double _budget = 5000.0;
-  final List<int> _expenses = [];
+  final List<Expense> _transactions = [
+    Expense(1, 'Groceries', 150.0, Category.food),
+    Expense(2, 'Movie Tickets', 40.0, Category.entertainment),
+    Expense(3, 'Electricity Bill', 120.0, Category.utilities),
+    Expense(4, 'Taxi Ride', 30.0, Category.transport),
+  ];
 
   double get _totalSpent =>
-      _expenses.fold(0.0, (sum, item) => sum + item);
+      _transactions.fold(0.0, (result, expense) => result + expense.amount);
+
+  Map<Category, double> get _categoryExpense =>
+      _transactions.fold({}, (map, expense) {
+        map[expense.category] = (map[expense.category] ?? 0) + expense.amount;
+        return map;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +115,7 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> {
                   ),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
-                    value: 0.5,
+                    value: _totalSpent / _budget,
                     minHeight: 8,
                     borderRadius: BorderRadius.circular(4),
                     backgroundColor: cs.onPrimaryContainer.withValues(
@@ -105,39 +149,43 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.eighteen_mp_rounded,
-                        color: Colors.red,
-                        size: 16,
+                  if (_transactions.isEmpty) Text('No Transactions'),
+                  ..._categoryExpense.keys.map(
+                    (key) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Row(
+                        children: [
+                          Icon(key.icon, color: key.color, size: 16),
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            width: 72,
+                            child: Text(
+                              key.label,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: LinearProgressIndicator(
+                              value: (_categoryExpense[key] ?? 0) / _totalSpent,
+                              minHeight: 10,
+                              borderRadius: BorderRadius.circular(4),
+                              backgroundColor: cs.onSurface.withValues(
+                                alpha: 0.08,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '\$${(_categoryExpense[key] ?? 0).toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      SizedBox(
-                        width: 72,
-                        child: Text(
-                          'Label',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: LinearProgressIndicator(
-                          value: 0.2,
-                          minHeight: 10,
-                          borderRadius: BorderRadius.circular(4),
-                          backgroundColor: cs.onSurface.withValues(alpha: 0.08),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '\$${100.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -152,29 +200,60 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.red,
-                child: Icon(
-                  Icons.eighteen_mp_rounded,
-                  color: Colors.red,
-                  size: 20,
-                ),
+          if (_transactions.isEmpty) Text('No Transaction Fount'),
+          ..._transactions.map(
+            (transaction) => Dismissible(
+              key: ValueKey(transaction.id),
+              onDismissed: (_) {
+                setState(() {
+                  _transactions.removeWhere(
+                    (item) => item.id == transaction.id,
+                  );
+                });
+              },
+              background: Container(
+                padding: EdgeInsets.only(right: 24.0),
+                alignment: Alignment.centerRight,
+                decoration: BoxDecoration(color: Colors.red),
+                child: Icon(Icons.delete, color: Colors.white),
               ),
-              title: Text('Title'),
-              subtitle: Text('Subtitle'),
-              trailing: Text(
-                '-\$${100.toStringAsFixed(2)}',
-                style: TextStyle(color: cs.error, fontWeight: FontWeight.bold),
+              child: Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: transaction.category.color.withValues(
+                      alpha: 0.3,
+                    ),
+                    child: Icon(
+                      transaction.category.icon,
+                      color: transaction.category.color,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(transaction.title),
+                  subtitle: Text(transaction.category.label),
+                  trailing: Text(
+                    '-\$${transaction.amount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: cs.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () async {
+          final result = await Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const AddExpenseScreen()));
+          setState(() {
+            _transactions.add(result);
+          });
+        },
         icon: const Icon(Icons.add),
         label: const Text('Add Expense'),
       ),
@@ -182,42 +261,93 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> {
   }
 }
 
-class ExpenseInfoCard extends StatelessWidget {
-  const ExpenseInfoCard({
-    super.key,
-    required this.budget,
-    required this.totalSpent,
-  });
+class AddExpenseScreen extends StatefulWidget {
+  const AddExpenseScreen({super.key});
 
-  final double budget;
-  final double totalSpent;
+  @override
+  State<AddExpenseScreen> createState() => _AddExpenseScreenState();
+}
+
+class _AddExpenseScreenState extends State<AddExpenseScreen> {
+  Category selectedCategory = Category.food;
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Colors.deepPurpleAccent.withValues(alpha: 0.2),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8.0)),
-        child: Column(
-          spacing: 10.0,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Budget: \$$budget'),
-                Text('Spent: \$$totalSpent'),
-              ],
+    return Scaffold(
+      appBar: AppBar(centerTitle: true, title: Text('Add Expense')),
+      body: ListView(
+        padding: EdgeInsets.all(24.0),
+        children: [
+          TextField(
+            controller: _titleController,
+            decoration: InputDecoration(
+              labelText: 'Title',
+              border: OutlineInputBorder(),
             ),
-            LinearProgressIndicator(
-              value: (totalSpent / budget).clamp(0, 1),
-              borderRadius: BorderRadius.circular(50.0),
-              minHeight: 7.0,
+          ),
+          SizedBox(height: 16.0),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Amount',
+              border: OutlineInputBorder(),
             ),
-            Text('\$${budget - totalSpent} remaining'),
-          ],
-        ),
+          ),
+          SizedBox(height: 16.0),
+          Wrap(
+            spacing: 10,
+            direction: Axis.horizontal,
+            children: Category.values
+                .map(
+                  (item) => ChoiceChip(
+                    label: Text(item.label),
+                    selected: item.label == selectedCategory.label,
+                    onSelected: (_) {
+                      setState(() {
+                        selectedCategory = item;
+                      });
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+          SizedBox(height: 24.0),
+          ElevatedButton(
+            onPressed: () {
+              final title = _titleController.text.trim();
+              final amountText = _amountController.text.trim();
+              if (title.isEmpty || amountText.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all fields'),
+                  ),
+                );
+                return;
+              }
+              final amount = double.tryParse(amountText);
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid amount'),
+                  ),
+                );
+                return;
+              }
+              final transaction = Expense(
+                Random().nextInt(9999),
+                title,
+                amount,
+                selectedCategory,
+              );
+
+              Navigator.of(context).pop(transaction);
+            },
+            child: Text('Add Expense'),
+          ),
+        ],
       ),
     );
   }
