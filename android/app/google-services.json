@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "654596543451",
+    "project_id": "workout-tracker-app-f6df0",
+    "storage_bucket": "workout-tracker-app-f6df0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654596543451:android:de292ee7efac612e24cdfe",
+        "android_client_info": {
+          "package_name": "ge.btu.personal_expenses"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUc7nOZ6iRKMh2v1uUCdKgwUEFJlMtgas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,6 +4,7 @@ import 'package:lottie/lottie.dart';
 import '../../domain/entities/exercise_entity.dart';
 import '../cubits/exercise_cubit.dart';
 import '../cubits/exercise_state.dart';
+import '../cubits/auth_cubit.dart';
 import 'detail_screen.dart';
 import 'add_screen.dart';
 
@@ -224,6 +225,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               const Text('Workout Tracker',
                   style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: 'Sign out',
+                onPressed: () => context.read<AuthCubit>().signOut(),
+              ),
               // Explicit animation — RotationTransition
               RotationTransition(
                 turns: _refreshAnimation,

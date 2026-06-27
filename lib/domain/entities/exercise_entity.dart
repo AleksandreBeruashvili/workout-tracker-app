@@ -43,6 +43,11 @@ class ExerciseEntity {
   final bool isFromApi;
   bool isCompleted;
 
+  /// Firestore document id, set only for exercises loaded from
+  /// FirestoreUserExerciseRepository. Null for API exercises and for a
+  /// brand-new exercise that hasn't been saved yet.
+  String? docId;
+
   ExerciseEntity({
     required this.id,
     required this.name,
@@ -54,5 +59,6 @@ class ExerciseEntity {
     required this.duration,
     this.isFromApi = false,
     this.isCompleted = false,
+    this.docId,
   });
 }

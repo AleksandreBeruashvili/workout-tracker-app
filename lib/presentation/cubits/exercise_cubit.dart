@@ -1,13 +1,25 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/exercise_entity.dart';
 import '../../domain/repositories/i_exercise_repository.dart';
+import '../../domain/repositories/i_user_exercise_repository.dart';
 import 'exercise_state.dart';
 
 class ExerciseCubit extends Cubit<ExerciseState> {
   final IExerciseRepository _repository;
-  int _userIdCounter = -1;
+  final IUserExerciseRepository _userRepository;
+  StreamSubscription<List<ExerciseEntity>>? _userExercisesSubscription;
 
-  ExerciseCubit(this._repository) : super(ExerciseInitial());
+  ExerciseCubit(this._repository, this._userRepository) : super(ExerciseInitial()) {
+    // Firestore stream keeps userExercises live-synced across the app
+    // (and across devices, if the same account signs in elsewhere).
+    _userExercisesSubscription = _userRepository.watchUserExercises().listen((userExercises) {
+      final prev = state;
+      if (prev is ExerciseLoaded) {
+        emit(prev.copyWith(userExercises: userExercises));
+      }
+    });
+  }
 
   Future<void> loadExercises(MuscleGroup group) async {
     final prev = state;
@@ -30,52 +42,42 @@ class ExerciseCubit extends Cubit<ExerciseState> {
     if (current is ExerciseLoaded) emit(current.copyWith(searchQuery: query));
   }
 
-  void addUserExercise(ExerciseEntity exercise) {
-    final current = state;
-    if (current is ExerciseLoaded) {
-      final withId = ExerciseEntity(
-        id: _userIdCounter--,
-        name: exercise.name,
-        description: exercise.description,
-        muscleGroup: exercise.muscleGroup,
-        equipment: exercise.equipment,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        duration: exercise.duration,
-        isFromApi: false,
-      );
-      emit(current.copyWith(userExercises: [...current.userExercises, withId]));
-    }
+  Future<void> addUserExercise(ExerciseEntity exercise) async {
+    // Optimistically just fire the write; the Firestore stream above will
+    // emit the updated list (with a real docId) once it round-trips.
+    await _userRepository.addExercise(exercise);
   }
 
-  void deleteExercise(ExerciseEntity exercise) {
-    final current = state;
-    if (current is ExerciseLoaded) {
-      if (exercise.isFromApi) {
+  Future<void> deleteExercise(ExerciseEntity exercise) async {
+    if (exercise.isFromApi) {
+      final current = state;
+      if (current is ExerciseLoaded) {
         emit(current.copyWith(
           apiExercises: current.apiExercises.where((e) => e.id != exercise.id).toList(),
         ));
-      } else {
-        emit(current.copyWith(
-          userExercises: current.userExercises.where((e) => e.id != exercise.id).toList(),
-        ));
       }
+    } else {
+      await _userRepository.deleteExercise(exercise);
     }
   }
 
-  void toggleComplete(ExerciseEntity exercise) {
-    final current = state;
-    if (current is ExerciseLoaded) {
-      final newApi = [...current.apiExercises];
-      final newUser = [...current.userExercises];
-      if (exercise.isFromApi) {
+  Future<void> toggleComplete(ExerciseEntity exercise) async {
+    if (exercise.isFromApi) {
+      final current = state;
+      if (current is ExerciseLoaded) {
+        final newApi = [...current.apiExercises];
         final idx = newApi.indexWhere((e) => e.id == exercise.id);
         if (idx != -1) newApi[idx].isCompleted = !newApi[idx].isCompleted;
-      } else {
-        final idx = newUser.indexWhere((e) => e.id == exercise.id);
-        if (idx != -1) newUser[idx].isCompleted = !newUser[idx].isCompleted;
+        emit(current.copyWith(apiExercises: newApi));
       }
-      emit(current.copyWith(apiExercises: newApi, userExercises: newUser));
+    } else {
+      await _userRepository.setCompleted(exercise, !exercise.isCompleted);
     }
+  }
+
+  @override
+  Future<void> close() {
+    _userExercisesSubscription?.cancel();
+    return super.close();
   }
 }
